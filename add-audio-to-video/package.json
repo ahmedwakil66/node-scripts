@@ -1,0 +1,12 @@
+{
+  "name": "add-audio-to-video",
+  "version": "1.0.0",
+  "description": "Merges audio and video without conversion",
+  "main": "merge.js",
+  "scripts": {
+    "start": "node merge.js"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0"
+  }
+}
