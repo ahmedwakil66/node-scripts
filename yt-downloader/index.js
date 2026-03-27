@@ -1,6 +1,12 @@
 import fs from 'fs';
+import path from 'path';
 import { select } from '@inquirer/prompts';
 import youtubedl from 'youtube-dl-exec';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+// Import the user's previously created merge.js script from its directory
+const mergeFiles = require('../add-audio-to-video/merge.js');
 
 async function main() {
   const url = process.argv[2];
@@ -89,9 +95,10 @@ async function main() {
     console.log(`\n\u2705 Successfully saved video to: ${videoFileName}`);
   } catch (e) {
     console.error("\u274c Error downloading video:", e.message || e);
+    process.exit(1);
   }
 
-  // Check if we need to download the audio separately
+  // Check if we need to download the audio separately and merge it
   const selectedHasAudio = selectedFormat.acodec !== 'none' && selectedFormat.acodec !== null;
   
   if (!selectedHasAudio) {
@@ -117,10 +124,27 @@ async function main() {
         });
       });
 
-      console.log(`\n\u2705 Successfully saved separate audio to: ${audioFileName}`);
-      console.log(`\n\ud83d\udca1 Hint: You can use your 'merge.js' script to combine these two files seamlessly!`);
+      console.log(`\n\u2705 Successfully saved separate audio track!`);
+      console.log(`\n\u23f3 Auto-merging the video and audio using your 'merge.js' script...`);
+
+      const absVideoPath = path.resolve(videoFileName);
+      const absAudioPath = path.resolve(audioFileName);
+      const finalMergedOutputPath = path.resolve(videoFileName); // Overwrite original video or use a new name
+
+      // Execute mergeFiles imported from add-audio-to-video directory
+      await mergeFiles(absVideoPath, absAudioPath, path.resolve(`merged_${videoFileName}`));
+
+      console.log(`\n\ud83d\uddd1\ufe0f Cleaning up intermediate files...`);
+      fs.unlinkSync(absVideoPath);
+      fs.unlinkSync(absAudioPath);
+      
+      // Rename merged_ back to original name
+      fs.renameSync(path.resolve(`merged_${videoFileName}`), absVideoPath);
+
+      console.log(`\u2705 Done! Final video saved with audio integrated at: ${videoFileName}`);
+      
     } catch (e) {
-      console.error("\u274c Error downloading audio:", e.message || e);
+      console.error("\u274c Error during audio extraction or merging:", e.message || e);
     }
   }
 }
