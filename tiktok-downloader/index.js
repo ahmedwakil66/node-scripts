@@ -3,15 +3,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
-const url = process.argv[2];
-
-if (!url) {
-  console.error('Please provide a TikTok URL as the first argument.');
-  console.log('Usage: node index.js <tiktok_url>');
-  process.exit(1);
-}
-
-async function downloadVideo() {
+async function downloadVideo(url) {
   try {
     console.log(`[TikTok Downloader] Fetching metadata for: ${url}`);
     
@@ -45,7 +37,7 @@ async function downloadVideo() {
     if (!videoUrl) {
       console.error('[TikTok Downloader] Could not extract video URL. The video might be private, deleted, or there was a rate limit.');
       console.error('Debug response:', JSON.stringify(result, null, 2));
-      process.exit(1);
+      return false;
     }
 
     console.log(`[TikTok Downloader] Found download URL. Starting download...`);
@@ -96,10 +88,10 @@ async function downloadVideo() {
 
     response.data.pipe(writer);
 
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       writer.on('finish', () => {
           process.stdout.write('\n');
-          console.log(`[TikTok Downloader] 🎉 Video successfully downloaded to: ${filePath}`);
+          console.log(`[TikTok Downloader] Video successfully downloaded to: ${filePath}`);
           resolve();
       });
       writer.on('error', (err) => {
@@ -107,12 +99,34 @@ async function downloadVideo() {
           console.error('[TikTok Downloader] ❌ Error writing video to disk:', err);
           reject(err);
       });
+      response.data.on('error', reject);
     });
 
+    return true;
+
   } catch (error) {
-    console.error('[TikTok Downloader] ❌ An error occurred:');
+    console.error('[TikTok Downloader] An error occurred:');
     console.error(error.message);
+    return false;
   }
 }
 
-downloadVideo();
+if (require.main === module) {
+  const url = process.argv[2];
+
+  if (!url) {
+    console.error('Please provide a TikTok URL as the first argument.');
+    console.log('Usage: node index.js <tiktok_url>');
+    process.exit(1);
+  }
+
+  downloadVideo(url).then((succeeded) => {
+    if (!succeeded) {
+      process.exit(1);
+    }
+  });
+}
+
+module.exports = {
+  downloadVideo,
+};
