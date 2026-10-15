@@ -7,6 +7,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 // Import the user's previously created merge.js script from its directory
 const mergeFiles = require('../add-audio-to-video/merge.js');
+const ytDlpOptions = { jsRuntimes: 'node' };
 
 async function main() {
   const url = process.argv[2];
@@ -21,6 +22,7 @@ async function main() {
   let info;
   try {
     info = await youtubedl(url, {
+      ...ytDlpOptions,
       dumpJson: true,
       noWarnings: true,
     });
@@ -78,8 +80,9 @@ async function main() {
   try {
     // We launch yt-dlp as a child process and pipe output so the user sees progress!
     const videoProcess = youtubedl.exec(url, {
+      ...ytDlpOptions,
       format: selectedFormat.format_id,
-      output: `"${videoFileName}"`
+      output: videoFileName
     });
 
     videoProcess.stdout.pipe(process.stdout);
@@ -110,8 +113,9 @@ async function main() {
 
     try {
       const audioProcess = youtubedl.exec(url, {
+        ...ytDlpOptions,
         format: 'bestaudio[ext=m4a]/bestaudio', // Prefer m4a for easiest merging with mp4
-        output: `"${audioFileName}"`
+        output: audioFileName
       });
 
       audioProcess.stdout.pipe(process.stdout);
